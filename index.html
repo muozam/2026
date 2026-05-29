@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panini 2026 · Álbum Colaborativo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ── CONFIG ── Pega tu URL de Apps Script aquí ── */
+  :root {
+    --api: "REEMPLAZA_CON_TU_URL_DE_APPS_SCRIPT";
+    --green: #16a34a;
+    --green-bg: #dcfce7;
+    --green-border: #86efac;
+    --yellow: #a16207;
+    --yellow-bg: #fef9c3;
+    --yellow-border: #fde047;
+    --red: #dc2626;
+    --bg: #f8f5f0;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #e5e0d8;
+    --accent: #d4292e;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 14px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: #fff;
+    line-height: 1;
+  }
+  .logo span { color: var(--accent); }
+
+  .header-stats {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .hstat {
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .hstat b { font-weight: 600; }
+  .hstat.green b { color: #4ade80; }
+  .hstat.yellow b { color: #fde047; }
+  .hstat.gray b { color: #9ca3af; }
+
+  .sync-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .2s;
+  }
+  .sync-btn:hover { background: rgba(255,255,255,0.18); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
+  .sync-dot.spin { background: #fbbf24; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  /* ── NAV GRUPOS ── */
+  .grupos-wrap {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .grupos-wrap::-webkit-scrollbar { display: none; }
+  .grupo-btn {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    margin-right: 6px;
+    color: var(--muted);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .grupo-btn:hover { background: var(--bg); color: var(--text); }
+  .grupo-btn.active {
+    background: #1a1a1a;
+    color: #fff;
+    border-color: #1a1a1a;
+    font-weight: 500;
+  }
+
+  /* ── CONTENT ── */
+  main { padding: 16px 20px 40px; max-width: 900px; margin: 0 auto; }
+
+  .legend {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .leg { display: flex; align-items: center; gap: 5px; }
+  .leg-sq {
+    width: 14px; height: 14px; border-radius: 3px;
+    border: 1px solid;
+  }
+  .leg-sq.p { background: var(--green-bg); border-color: var(--green-border); }
+  .leg-sq.r { background: var(--yellow-bg); border-color: var(--yellow-border); }
+  .leg-sq.f { background: #f3f4f6; border-color: #d1d5db; }
+
+  .pais-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .pais-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .pais-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .pais-prog-txt {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .prog-bar {
+    height: 4px;
+    background: #f3f4f6;
+    border-radius: 2px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width .4s;
+  }
+  .fichas-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .ficha {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    transition: transform .1s, background .15s, border-color .15s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ficha:active { transform: scale(0.9); }
+  .ficha.pegada {
+    background: var(--green-bg);
+    border-color: var(--green-border);
+    color: var(--green);
+  }
+  .ficha.repetida {
+    background: var(--yellow-bg);
+    border-color: var(--yellow-border);
+    color: var(--yellow);
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: #1a1a1a;
+    color: #fff;
+    padding: 9px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── CONFIG BANNER ── */
+  #config-banner {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #92400e;
+    display: none;
+  }
+  #config-banner b { font-weight: 600; }
+
+  /* ── LOADING ── */
+  #loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #1a1a1a;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 480px) {
+    header { padding: 10px 14px; }
+    main { padding: 12px 14px 40px; }
+    .ficha { width: 34px; height: 34px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+  CONFIGURACIÓN — Cambia esta URL por la tuya
+═══════════════════════════════════════════════ -->
+<script>
+  const API_URL = "https://script.google.com/macros/s/AKfycbyjhAr_8DuOHTYoOluMArwwMn2NtxSzjR--9FRCDHeg3hcBojQE73muStDS2OxMzSfOew/exec";
+</script>
+<!-- ════════════════════════════════════════════ -->
+
+<header>
+  <div class="logo">Panini <span>2026</span></div>
+  <div class="header-stats">
+    <div class="hstat green">✔ <b id="cnt-p">0</b> pegadas</div>
+    <div class="hstat yellow">↻ <b id="cnt-r">0</b> repetidas</div>
+    <div class="hstat gray">✖ <b id="cnt-f">1040</b> faltantes</div>
+  </div>
+  <button class="sync-btn" onclick="syncNow()">
+    <span class="sync-dot" id="sync-dot"></span>
+    <span id="sync-lbl">Sincronizar</span>
+  </button>
+</header>
+
+<div class="grupos-wrap" id="grupos-nav"></div>
+
+<main>
+  <div id="config-banner">
+    ⚠️ <b>Falta configurar la URL del backend.</b> Abre el archivo index.html y reemplaza <code>REEMPLAZA_CON_TU_URL_DE_APPS_SCRIPT</code> con la URL de tu Web App de Google Apps Script.
+  </div>
+
+  <div class="legend">
+    <div class="leg"><div class="leg-sq p"></div> Pegada</div>
+    <div class="leg"><div class="leg-sq r"></div> Repetida</div>
+    <div class="leg"><div class="leg-sq f"></div> Faltante</div>
+    <span style="color:#9ca3af;font-size:12px">· Toca para cambiar estado</span>
+  </div>
+
+  <div id="loading"><div class="spinner"></div>Cargando fichas...</div>
+  <div id="content" style="display:none"></div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── DATOS ──
+const GRUPOS = ["Intro FWC","Grupo A","Grupo B","Grupo C","Grupo D","Grupo E","Grupo F","Grupo G","Grupo H","Grupo I","Grupo J","Grupo K","Grupo L","Especial"];
+const PAISES_POR_GRUPO = {
+  "Intro FWC":["Intro/Estadios"],
+  "Grupo A":["MEX (México)","USA (EE.UU.)","CAN (Canadá)","AFG (Afganistán)"],
+  "Grupo B":["BRA (Brasil)","KOR (Corea)","GHA (Ghana)","MLI (Mali)"],
+  "Grupo C":["ESP (España)","GER (Alemania)","IRQ (Irak)","PAN (Panamá)"],
+  "Grupo D":["FRA (Francia)","URU (Uruguay)","JPN (Japón)","CMR (Camerún)"],
+  "Grupo E":["ENG (Inglaterra)","COL (Colombia)","UZB (Uzbekistán)","JAM (Jamaica)"],
+  "Grupo F":["POR (Portugal)","BEL (Bélgica)","MAR (Marruecos)","AUS (Australia)"],
+  "Grupo G":["ITA (Italia)","NED (P. Bajos)","KSA (Arabia)","ECU (Ecuador)"],
+  "Grupo H":["ARG (Argentina)","ALG (Argelia)","AUT (Austria)","JOR (Jordania)"],
+  "Grupo I":["CRO (Croacia)","SUI (Suiza)","EGY (Egipto)","CRC (Costa Rica)"],
+  "Grupo J":["DEN (Dinamarca)","UKR (Ucrania)","SEN (Senegal)","PAR (Paraguay)"],
+  "Grupo K":["POL (Polonia)","TUR (Turquía)","TUN (Túnez)","VEN (Venezuela)"],
+  "Grupo L":["SWE (Suecia)","SRB (Serbia)","NGA (Nigeria)","HON (Honduras)"],
+  "Especial":["LEG (Leyendas)","MST (Museo)","CC (Coca-Cola)"]
+};
+const MAX_FICHAS = {
+  "Intro/Estadios":28,
+  "CC (Coca-Cola)":12
+};
+function maxF(p){ return MAX_FICHAS[p] || 20; }
+
+// ── STATE ──
+let state = {};
+let activeGrupo = "Grupo A";
+let dirty = false;
+let syncTimer = null;
+const ESTADOS = ['f','p','r'];
+const LABEL = {p:'✔',r:'↻',f:''};
+
+// ── API ──
+async function apiGet(action) {
+  const url = API_URL + "?action=" + action;
+  const r = await fetch(url);
+  return r.json();
+}
+async function apiSet(key, estado) {
+  await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ action:"set", key, estado })
+  });
+}
+
+async function loadState() {
+  if (API_URL.includes("REEMPLAZA")) {
+    document.getElementById("config-banner").style.display = "block";
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    renderAll();
+    return;
+  }
+  try {
+    const data = await apiGet("getAll");
+    state = data || {};
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    renderAll();
+  } catch(e) {
+    document.getElementById("loading").innerHTML = "⚠️ No se pudo conectar al servidor. Verifica la URL del Apps Script.";
+  }
+}
+
+async function saveState() {
+  if (API_URL.includes("REEMPLAZA")) return;
+  setSyncing(true);
+  try {
+    // Recopilar todos los cambios pendientes
+    const updates = {};
+    Object.entries(state).forEach(([k,v]) => { if(v !== 'f') updates[k] = v; });
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action:"setMany", updates })
+    });
+    setSyncing(false);
+    dirty = false;
+  } catch(e) {
+    setSyncing(false);
+    setTimeout(saveState, 3000);
+  }
+}
+
+async function syncNow() {
+  if (API_URL.includes("REEMPLAZA")) { showToast("Configura la URL primero"); return; }
+  setSyncing(true);
+  document.getElementById("sync-lbl").textContent = "Actualizando...";
+  try {
+    const data = await apiGet("getAll");
+    state = data || {};
+    renderGrupo(activeGrupo);
+    updateTotals();
+    setSyncing(false);
+    showToast("✔ Datos actualizados");
+  } catch(e) {
+    setSyncing(false);
+    showToast("Error al sincronizar");
+  }
+}
+
+function setSyncing(s) {
+  document.getElementById("sync-dot").className = "sync-dot" + (s ? " spin" : "");
+  document.getElementById("sync-lbl").textContent = s ? "Guardando..." : "Sincronizado";
+}
+
+// ── LÓGICA ──
+function getEstado(pais, n) { return state[pais+"|"+n] || 'f'; }
+function nextEstado(e) { const i = ESTADOS.indexOf(e); return ESTADOS[(i+1)%3]; }
+
+function onFichaClick(pais, n) {
+  const k = pais+"|"+n;
+  const next = nextEstado(state[k] || 'f');
+  if (next === 'f') delete state[k]; else state[k] = next;
+  updateFichaEl(pais, n);
+  updatePaisProgress(pais);
+  updateTotals();
+  dirty = true;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(saveState, 1500);
+}
+
+function updateFichaEl(pais, n) {
+  const el = document.getElementById("f_" + CSS.escape(pais) + "_" + n);
+  if (!el) return;
+  const e = getEstado(pais, n);
+  el.className = "ficha" + (e==="p"?" pegada":e==="r"?" repetida":"");
+  el.textContent = e === 'f' ? n : LABEL[e];
+  el.title = e==="p"?"Pegada":e==="r"?"Repetida":"Faltante";
+}
+
+function updatePaisProgress(pais) {
+  const max = maxF(pais);
+  let p=0, r=0;
+  for(let i=1;i<=max;i++){ const e=getEstado(pais,i); if(e==="p")p++; else if(e==="r")r++; }
+  const pct = Math.round((p/max)*100);
+  const bar = document.getElementById("bar_" + CSS.escape(pais));
+  const lbl = document.getElementById("prog_" + CSS.escape(pais));
+  if(bar) bar.style.width = pct + "%";
+  if(lbl) lbl.textContent = p+"/"+max+" pegadas"+(r?" · "+r+" rep.":"");
+}
+
+function updateTotals() {
+  let p=0, r=0;
+  Object.values(state).forEach(e => { if(e==="p")p++; else if(e==="r")r++; });
+  document.getElementById("cnt-p").textContent = p;
+  document.getElementById("cnt-r").textContent = r;
+  document.getElementById("cnt-f").textContent = 1040 - p - r;
+}
+
+// ── RENDER ──
+function renderAll() {
+  renderNav();
+  renderGrupo(activeGrupo);
+  updateTotals();
+}
+
+function renderNav() {
+  document.getElementById("grupos-nav").innerHTML = GRUPOS.map(g =>
+    `<button class="grupo-btn${g===activeGrupo?" active":""}" onclick="switchGrupo('${g}')">${g}</button>`
+  ).join("");
+}
+
+function switchGrupo(g) {
+  activeGrupo = g;
+  renderNav();
+  renderGrupo(g);
+}
+
+function renderGrupo(g) {
+  const paises = PAISES_POR_GRUPO[g] || [];
+  document.getElementById("content").innerHTML = paises.map(renderPais).join("");
+}
+
+function renderPais(pais) {
+  const max = maxF(pais);
+  let p=0, r=0;
+  for(let i=1;i<=max;i++){ const e=getEstado(pais,i); if(e==="p")p++; else if(e==="r")r++; }
+  const pct = Math.round((p/max)*100);
+  const id = CSS.escape(pais);
+  const fichasHTML = Array.from({length:max},(_,i)=>{
+    const n=i+1, e=getEstado(pais,n);
+    const cls = "ficha"+(e==="p"?" pegada":e==="r"?" repetida":"");
+    const lbl = e==="f"?n:LABEL[e];
+    return `<div class="${cls}" id="f_${id}_${n}" onclick="onFichaClick('${pais.replace(/'/g,"\\'")}',${n})" title="${e==="p"?"Pegada":e==="r"?"Repetida":"Faltante"}">${lbl}</div>`;
+  }).join("");
+  return `<div class="pais-card">
+    <div class="pais-header">
+      <div class="pais-name">${pais}</div>
+      <div class="pais-prog-txt" id="prog_${id}">${p}/${max} pegadas${r?" · "+r+" rep.":""}</div>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="bar_${id}" style="width:${pct}%"></div></div>
+    <div class="fichas-grid">${fichasHTML}</div>
+  </div>`;
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ── AUTO-SYNC cada 20s ──
+setInterval(async () => {
+  if (!dirty && !API_URL.includes("REEMPLAZA")) {
+    try {
+      const data = await apiGet("getAll");
+      const remoto = JSON.stringify(data);
+      const local = JSON.stringify(
+        Object.fromEntries(Object.entries(state).filter(([,v])=>v!=='f'))
+      );
+      if (remoto !== local) {
+        state = data || {};
+        renderGrupo(activeGrupo);
+        updateTotals();
+        showToast("↻ Actualizado por otro usuario");
+      }
+    } catch(e) {}
+  }
+}, 20000);
+
+// ── INICIO ──
+loadState();
+</script>
+</body>
+</html>
