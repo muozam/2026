@@ -431,6 +431,7 @@ function onFichaClick(pais, n) {
   const k = pais+"|"+n;
   const next = nextEstado(state[k] || 'f');
   if (next === 'f') delete state[k]; else state[k] = next;
+  console.log("Estado:", state[k]);
   updateFichaEl(pais, n);
   updatePaisProgress(pais);
   updateTotals();
