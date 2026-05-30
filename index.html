@@ -9,7 +9,7 @@
 <style>
   /* ── CONFIG ── Pega tu URL de Apps Script aquí ── */
   :root {
-    --api: "REEMPLAZA_CON_TU_URL_DE_APPS_SCRIPT";
+    --api: "https://script.google.com/macros/s/AKfycbyjhAr_8DuOHTYoOluMArwwMn2NtxSzjR--9FRCDHeg3hcBojQE73muStDS2OxMzSfOew/exec";
     --green: #16a34a;
     --green-bg: #dcfce7;
     --green-border: #86efac;
@@ -301,7 +301,7 @@
 
 <main>
   <div id="config-banner">
-    ⚠️ <b>Falta configurar la URL del backend.</b> Abre el archivo index.html y reemplaza <code>REEMPLAZA_CON_TU_URL_DE_APPS_SCRIPT</code> con la URL de tu Web App de Google Apps Script.
+    ⚠️ <b>Falta configurar la URL del backend.</b> Abre el archivo index.html y reemplaza <code>https://script.google.com/macros/s/AKfycbyjhAr_8DuOHTYoOluMArwwMn2NtxSzjR--9FRCDHeg3hcBojQE73muStDS2OxMzSfOew/exec</code> con la URL de tu Web App de Google Apps Script.
   </div>
 
   <div class="legend">
@@ -388,7 +388,7 @@ async function saveState() {
   try {
     // Recopilar todos los cambios pendientes
     const updates = {};
-    Object.entries(state).forEach(([k,v]) => { if(v !== 'f') updates[k] = v; });
+    Object.entries(state).forEach(([k,v]) => { updates[k] = v; }); // envía todos, incluyendo 'f'
     await fetch(API_URL, {
       method: "POST",
       body: JSON.stringify({ action:"setMany", updates })
@@ -430,8 +430,7 @@ function nextEstado(e) { const i = ESTADOS.indexOf(e); return ESTADOS[(i+1)%3]; 
 function onFichaClick(pais, n) {
   const k = pais+"|"+n;
   const next = nextEstado(state[k] || 'f');
-  if (next === 'f') delete state[k]; else state[k] = next;
-  console.log("Estado:", state[k]);
+  state[k] = next; // siempre guarda, incluyendo 'f' para sobreescribir en el servidor
   updateFichaEl(pais, n);
   updatePaisProgress(pais);
   updateTotals();
@@ -528,9 +527,7 @@ setInterval(async () => {
     try {
       const data = await apiGet("getAll");
       const remoto = JSON.stringify(data);
-      const local = JSON.stringify(
-        Object.fromEntries(Object.entries(state).filter(([,v])=>v!=='f'))
-      );
+      const local = JSON.stringify(state);
       if (remoto !== local) {
         state = data || {};
         renderGrupo(activeGrupo);
