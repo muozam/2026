@@ -267,6 +267,69 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── BARRA DE BÚSQUEDA ── */
+  .search-wrap {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+  }
+  .search-box {
+    display: flex;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 7px 12px;
+    gap: 8px;
+    transition: border-color .15s;
+  }
+  .search-box:focus-within {
+    border-color: #1a1a1a;
+    background: #fff;
+  }
+  .search-icon { color: var(--muted); font-size: 15px; flex-shrink: 0; }
+  .search-input {
+    border: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    width: 100%;
+  }
+  .search-input::placeholder { color: #9ca3af; }
+  .search-clear {
+    background: #e5e7eb;
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    cursor: pointer;
+    color: #6b7280;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .search-clear.visible { display: flex; }
+  .search-count {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+    min-height: 16px;
+  }
+  .ficha.hidden-search { display: none; }
+  .pais-card.hidden-search { display: none; }
+  .no-results {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 14px;
+    display: none;
+  }
+
   @media (max-width: 480px) {
     header { padding: 10px 14px; }
     main { padding: 12px 14px 40px; }
@@ -299,20 +362,30 @@
 
 <div class="grupos-wrap" id="grupos-nav"></div>
 
+<div class="search-wrap">
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="search-input" type="text" placeholder="Buscar país o número de ficha..." oninput="onSearch(this.value)" />
+    <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+  </div>
+  <div class="search-count" id="search-count"></div>
+</div>
+
 <main>
   <div id="config-banner">
     ⚠️ <b>Falta configurar la URL del backend.</b> Abre el archivo index.html y reemplaza <code>https://script.google.com/macros/s/AKfycbyjhAr_8DuOHTYoOluMArwwMn2NtxSzjR--9FRCDHeg3hcBojQE73muStDS2OxMzSfOew/exec</code> con la URL de tu Web App de Google Apps Script.
   </div>
 
-  <div class="legend">
-    <div class="leg"><div class="leg-sq p"></div> Pegada</div>
-    <div class="leg"><div class="leg-sq r"></div> Repetida</div>
-    <div class="leg"><div class="leg-sq f"></div> Faltante</div>
-    <span style="color:#9ca3af;font-size:12px">· Toca para cambiar estado</span>
+  <div class="filter-bar">
+    <button class="filter-btn active" id="fbtn-all" onclick="setFilter('all')">Todas</button>
+    <button class="filter-btn pegada"  id="fbtn-p"  onclick="setFilter('p')">&#10004; Pegadas</button>
+    <button class="filter-btn repetida" id="fbtn-r" onclick="setFilter('r')">&#8635; Repetidas</button>
+    <button class="filter-btn faltante" id="fbtn-f" onclick="setFilter('f')">&#10006; Faltantes</button>
   </div>
 
   <div id="loading"><div class="spinner"></div>Cargando fichas...</div>
   <div id="content" style="display:none"></div>
+  <div class="no-results" id="no-results">😕 No se encontraron resultados</div>
 </main>
 
 <div id="toast"></div>
@@ -488,7 +561,10 @@ function switchGrupo(g) {
 
 function renderGrupo(g) {
   const paises = PAISES_POR_GRUPO[g] || [];
-  document.getElementById("content").innerHTML = paises.map(renderPais).join("");
+  const html = paises.map(renderPais).join("");
+  document.getElementById("content").innerHTML = html;
+  const noResults = document.getElementById("no-results");
+  noResults.style.display = html.trim() === "" ? "block" : "none";
 }
 
 function renderPais(pais) {
@@ -497,12 +573,16 @@ function renderPais(pais) {
   for(let i=1;i<=max;i++){ const e=getEstado(pais,i); if(e==="p")p++; else if(e==="r")r++; }
   const pct = Math.round((p/max)*100);
   const id = CSS.escape(pais);
+  let fichaCount = 0;
   const fichasHTML = Array.from({length:max},(_,i)=>{
     const n=i+1, e=getEstado(pais,n);
+    if (!applyFilter(null, e)) return '';
+    fichaCount++;
     const cls = "ficha"+(e==="p"?" pegada":e==="r"?" repetida":"");
     const lbl = e==="f"?n:LABEL[e];
     return `<div class="${cls}" id="f_${id}_${n}" onclick="onFichaClick('${pais.replace(/'/g,"\\'")}',${n})" title="${e==="p"?"Pegada":e==="r"?"Repetida":"Faltante"}">${lbl}</div>`;
   }).join("");
+  if (fichaCount === 0) return '';
   return `<div class="pais-card">
     <div class="pais-header">
       <div class="pais-name">${pais}</div>
@@ -514,6 +594,119 @@ function renderPais(pais) {
 }
 
 // ── TOAST ──
+// ── BÚSQUEDA ──
+let searchQuery = '';
+
+function onSearch(val) {
+  searchQuery = val.trim().toLowerCase();
+  const clearBtn = document.getElementById('search-clear');
+  clearBtn.className = 'search-clear' + (searchQuery ? ' visible' : '');
+
+  if (!searchQuery) {
+    clearSearch();
+    return;
+  }
+
+  // Renderiza todos los grupos para poder buscar en todos
+  const allPaises = Object.values(PAISES_POR_GRUPO).flat();
+  const content = document.getElementById('content');
+
+  // Si es número, buscar ficha exacta en todos los países
+  const isNum = /^\d+$/.test(searchQuery);
+
+  let totalFichas = 0;
+  let htmlPaises = '';
+
+  for (const pais of allPaises) {
+    const paisMatch = pais.toLowerCase().includes(searchQuery);
+    const max = maxF(pais);
+    let fichasHTML = '';
+    let fichasEncontradas = 0;
+
+    for (let n = 1; n <= max; n++) {
+      const e = getEstado(pais, n);
+      const match = paisMatch || (isNum && String(n) === searchQuery);
+      if (!match) continue;
+      if (!applyFilter(null, e)) continue;
+      fichasEncontradas++;
+      totalFichas++;
+      const cls = 'ficha' + (e === 'p' ? ' pegada' : e === 'r' ? ' repetida' : '');
+      const lbl = e === 'f' ? n : LABEL[e];
+      fichasHTML += `<div class="${cls}" id="f_${CSS.escape(pais)}_${n}" onclick="onFichaClick('${pais.replace(/'/g,"\\'")}',${n})" title="${e==='p'?'Pegada':e==='r'?'Repetida':'Faltante'}">${lbl}</div>`;
+    }
+
+    if (fichasEncontradas > 0) {
+      let p = 0, r = 0;
+      for (let i = 1; i <= max; i++) { const est = getEstado(pais, i); if (est === 'p') p++; else if (est === 'r') r++; }
+      const pct = Math.round((p / max) * 100);
+      const id = CSS.escape(pais);
+      htmlPaises += `<div class="pais-card">
+        <div class="pais-header">
+          <div class="pais-name">${pais}</div>
+          <div class="pais-prog-txt" id="prog_${id}">${p}/${max} pegadas${r ? ' · ' + r + ' rep.' : ''}</div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" id="bar_${id}" style="width:${pct}%"></div></div>
+        <div class="fichas-grid">${fichasHTML}</div>
+      </div>`;
+    }
+  }
+
+  content.innerHTML = htmlPaises;
+  const noResults = document.getElementById('no-results');
+  noResults.style.display = totalFichas === 0 ? 'block' : 'none';
+
+  const countEl = document.getElementById('search-count');
+  countEl.textContent = totalFichas > 0
+    ? `${totalFichas} ficha${totalFichas !== 1 ? 's' : ''} encontrada${totalFichas !== 1 ? 's' : ''}`
+    : '';
+}
+
+
+// ── FILTRO POR ESTADO ──
+let activeFilter = 'all';
+
+function setFilter(f) {
+  activeFilter = f;
+  // update button styles
+  ['all','p','r','f'].forEach(id => {
+    const btn = document.getElementById('fbtn-' + id);
+    if (btn) btn.classList.remove('active');
+  });
+  document.getElementById('fbtn-' + f).classList.add('active');
+
+  // If searching, re-run search; else re-render grupo
+  const q = document.getElementById('search-input').value.trim();
+  if (q) {
+    onSearch(q);
+  } else {
+    renderGrupo(activeGrupo);
+  }
+}
+
+function applyFilter(fichaEl, estado) {
+  if (activeFilter === 'all') return true;
+  return estado === activeFilter;
+}
+
+function clearSearch() {
+  searchQuery = '';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').className = 'search-clear';
+  document.getElementById('search-count').textContent = '';
+  document.getElementById('no-results').style.display = 'none';
+  renderGrupo(activeGrupo);
+}
+
+function resetFilter() {
+  activeFilter = 'all';
+  ['all','p','r','f'].forEach(id => {
+    const btn = document.getElementById('fbtn-' + id);
+    if (btn) btn.classList.remove('active');
+  });
+  const allBtn = document.getElementById('fbtn-all');
+  if (allBtn) allBtn.classList.add('active');
+}
+
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
