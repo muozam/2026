@@ -403,26 +403,37 @@
 // ── DATOS ──
 const GRUPOS = ["Intro FWC","Grupo A","Grupo B","Grupo C","Grupo D","Grupo E","Grupo F","Grupo G","Grupo H","Grupo I","Grupo J","Grupo K","Grupo L","Especial"];
 const PAISES_POR_GRUPO = {
-  "Intro FWC":["Intro/Estadios"],
-  "Grupo A":["MEX (México)","USA (EE.UU.)","CAN (Canadá)","AFG (Afganistán)"],
-  "Grupo B":["BRA (Brasil)","KOR (Corea)","GHA (Ghana)","MLI (Mali)"],
-  "Grupo C":["ESP (España)","GER (Alemania)","IRQ (Irak)","PAN (Panamá)"],
-  "Grupo D":["FRA (Francia)","URU (Uruguay)","JPN (Japón)","CMR (Camerún)"],
-  "Grupo E":["ENG (Inglaterra)","COL (Colombia)","UZB (Uzbekistán)","JAM (Jamaica)"],
-  "Grupo F":["POR (Portugal)","BEL (Bélgica)","MAR (Marruecos)","AUS (Australia)"],
-  "Grupo G":["ITA (Italia)","NED (P. Bajos)","KSA (Arabia)","ECU (Ecuador)"],
-  "Grupo H":["ARG (Argentina)","ALG (Argelia)","AUT (Austria)","JOR (Jordania)"],
-  "Grupo I":["CRO (Croacia)","SUI (Suiza)","EGY (Egipto)","CRC (Costa Rica)"],
-  "Grupo J":["DEN (Dinamarca)","UKR (Ucrania)","SEN (Senegal)","PAR (Paraguay)"],
-  "Grupo K":["POL (Polonia)","TUR (Turquía)","TUN (Túnez)","VEN (Venezuela)"],
-  "Grupo L":["SWE (Suecia)","SRB (Serbia)","NGA (Nigeria)","HON (Honduras)"],
-  "Especial":["LEG (Leyendas)","MST (Museo)","CC (Coca-Cola)"]
+  "Intro FWC":["FWC Highlights","History"],
+  "Grupo A":["MEX (México)","RSA (Sudáfrica)","KOR (Corea)","CZE (Chequia)"],
+  "Grupo B":["CAN (Canadá)","BIH (Bosnia-Herz.)","QAT (Catar)","SUI (Suiza)"],
+  "Grupo C":["BRA (Brasil)","MAR (Marruecos)","HAI (Haití)","SCO (Escocia)"],
+  "Grupo D":["USA (EE.UU.)","PAR (Paraguay)","AUS (Australia)","TUR (Turquía)"],
+  "Grupo E":["GER (Alemania)","CUW (Curazao)","CIV (Costa de Marfil)","ECU (Ecuador)"],
+  "Grupo F":["NED (P. Bajos)","JPN (Japón)","SWE (Suecia)","TUN (Túnez)"],
+  "Grupo G":["BEL (Bélgica)","EGY (Egipto)","IRN (IR Irán)","NZL (Nueva Zelanda)"],
+  "Grupo H":["ESP (España)","CPV (Cabo Verde)","KSA (Arabia)","URU (Uruguay)"],
+  "Grupo I":["FRA (Francia)","SEN (Senegal)","IRQ (Irak)","NOR (Noruega)"],
+  "Grupo J":["ARG (Argentina)","ALG (Argelia)","AUT (Austria)","JOR (Jordania)"],
+  "Grupo K":["POR (Portugal)","COD (Congo DR)","UZB (Uzbekistán)","COL (Colombia)"],
+  "Grupo L":["ENG (Inglaterra)","CRO (Croacia)","GHA (Ghana)","PAN (Panamá)"],
+  "Especial":["CC (Coca-Cola)"]
 };
 const MAX_FICHAS = {
-  "Intro/Estadios":28,
-  "CC (Coca-Cola)":12
+  "FWC Highlights": {from:0, to:8},
+  "History":        {from:9, to:19},
+  "CC (Coca-Cola)": {from:1, to:14}
 };
-function maxF(p){ return MAX_FICHAS[p] || 20; }
+function maxF(p){
+  const m = MAX_FICHAS[p];
+  if (!m) return 20;
+  if (typeof m === 'object') return m.to - m.from + 1;
+  return m;
+}
+function startF(p){
+  const m = MAX_FICHAS[p];
+  if (m && typeof m === 'object') return m.from;
+  return 1;
+}
 
 // ── STATE ──
 let state = {};
@@ -533,7 +544,7 @@ function updateFichaEl(pais, n) {
 function updatePaisProgress(pais) {
   const max = maxF(pais);
   let p=0, r=0;
-  for(let i=1;i<=max;i++){ const e=getEstado(pais,i); if(e==="p")p++; else if(e==="r")r++; }
+  const _s=startF(pais); for(let i=_s;i<_s+max;i++){ const e=getEstado(pais,i); if(e==="p")p++; else if(e==="r")r++; }
   const pct = Math.round((p/max)*100);
   const bar = document.getElementById("bar_" + CSS.escape(pais));
   const lbl = document.getElementById("prog_" + CSS.escape(pais));
@@ -579,12 +590,13 @@ function renderGrupo(g) {
 function renderPais(pais) {
   const max = maxF(pais);
   let p=0, r=0;
-  for(let i=1;i<=max;i++){ const e=getEstado(pais,i); if(e==="p")p++; else if(e==="r")r++; }
+  const _s=startF(pais); for(let i=_s;i<_s+max;i++){ const e=getEstado(pais,i); if(e==="p")p++; else if(e==="r")r++; }
   const pct = Math.round((p/max)*100);
   const id = CSS.escape(pais);
+  const start = startF(pais);
   let fichaCount = 0;
   const fichasHTML = Array.from({length:max},(_,i)=>{
-    const n=i+1, e=getEstado(pais,n);
+    const n=start+i, e=getEstado(pais,n);
     if (!applyFilter(null, e)) return '';
     fichaCount++;
     const cls = "ficha"+(e==="p"?" pegada":e==="r"?" repetida":"");
@@ -632,7 +644,7 @@ function onSearch(val) {
     let fichasHTML = '';
     let fichasEncontradas = 0;
 
-    for (let n = 1; n <= max; n++) {
+    const st2=startF(pais); for (let n = st2; n < st2+max; n++) {
       const e = getEstado(pais, n);
       const match = paisMatch || (isNum && String(n) === searchQuery);
       if (!match) continue;
