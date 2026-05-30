@@ -63,17 +63,31 @@
   }
   .hstat {
     background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 20px;
     padding: 4px 12px;
     font-size: 13px;
     display: flex;
     align-items: center;
     gap: 5px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    color: #fff;
+    transition: background .15s, border-color .15s, transform .1s;
+    white-space: nowrap;
   }
+  .hstat:hover { background: rgba(255,255,255,0.18); }
+  .hstat:active { transform: scale(0.95); }
   .hstat b { font-weight: 600; }
   .hstat.green b { color: #4ade80; }
   .hstat.yellow b { color: #fde047; }
   .hstat.gray b { color: #9ca3af; }
+  .hstat.green.active  { background: #16a34a; border-color: #16a34a; }
+  .hstat.yellow.active { background: #a16207; border-color: #a16207; }
+  .hstat.gray.active   { background: #4b5563; border-color: #4b5563; }
+  .hstat.green.active b,
+  .hstat.yellow.active b,
+  .hstat.gray.active b { color: #fff; }
 
   .sync-btn {
     background: rgba(255,255,255,0.1);
@@ -350,9 +364,9 @@
 <header>
   <div class="logo">Panini <span>2026</span></div>
   <div class="header-stats">
-    <div class="hstat green">✔ <b id="cnt-p">0</b> pegadas</div>
-    <div class="hstat yellow">↻ <b id="cnt-r">0</b> repetidas</div>
-    <div class="hstat gray">✖ <b id="cnt-f">1040</b> faltantes</div>
+    <button class="hstat green" id="fbtn-p" onclick="setFilter('p')">✔ <b id="cnt-p">0</b> pegadas</button>
+    <button class="hstat yellow" id="fbtn-r" onclick="setFilter('r')">↻ <b id="cnt-r">0</b> repetidas</button>
+    <button class="hstat gray" id="fbtn-f" onclick="setFilter('f')">✖ <b id="cnt-f">1040</b> faltantes</button>
   </div>
   <button class="sync-btn" onclick="syncNow()">
     <span class="sync-dot" id="sync-dot"></span>
@@ -376,12 +390,7 @@
     ⚠️ <b>Falta configurar la URL del backend.</b> Abre el archivo index.html y reemplaza <code>https://script.google.com/macros/s/AKfycbyjhAr_8DuOHTYoOluMArwwMn2NtxSzjR--9FRCDHeg3hcBojQE73muStDS2OxMzSfOew/exec</code> con la URL de tu Web App de Google Apps Script.
   </div>
 
-  <div class="filter-bar">
-    <button class="filter-btn active" id="fbtn-all" onclick="setFilter('all')">Todas</button>
-    <button class="filter-btn pegada"  id="fbtn-p"  onclick="setFilter('p')">&#10004; Pegadas</button>
-    <button class="filter-btn repetida" id="fbtn-r" onclick="setFilter('r')">&#8635; Repetidas</button>
-    <button class="filter-btn faltante" id="fbtn-f" onclick="setFilter('f')">&#10006; Faltantes</button>
-  </div>
+
 
   <div id="loading"><div class="spinner"></div>Cargando fichas...</div>
   <div id="content" style="display:none"></div>
@@ -666,21 +675,23 @@ function onSearch(val) {
 let activeFilter = 'all';
 
 function setFilter(f) {
+  // Toggle: if already active, go back to 'all'
+  if (activeFilter === f) f = 'all';
   activeFilter = f;
-  // update button styles
-  ['all','p','r','f'].forEach(id => {
+
+  // Reset all pills
+  ['p','r','f'].forEach(id => {
     const btn = document.getElementById('fbtn-' + id);
     if (btn) btn.classList.remove('active');
   });
-  document.getElementById('fbtn-' + f).classList.add('active');
-
-  // If searching, re-run search; else re-render grupo
-  const q = document.getElementById('search-input').value.trim();
-  if (q) {
-    onSearch(q);
-  } else {
-    renderGrupo(activeGrupo);
+  if (f !== 'all') {
+    const btn = document.getElementById('fbtn-' + f);
+    if (btn) btn.classList.add('active');
   }
+
+  // Re-render
+  const q = document.getElementById('search-input').value.trim();
+  if (q) { onSearch(q); } else { renderGrupo(activeGrupo); }
 }
 
 function applyFilter(fichaEl, estado) {
@@ -699,12 +710,10 @@ function clearSearch() {
 
 function resetFilter() {
   activeFilter = 'all';
-  ['all','p','r','f'].forEach(id => {
+  ['p','r','f'].forEach(id => {
     const btn = document.getElementById('fbtn-' + id);
     if (btn) btn.classList.remove('active');
   });
-  const allBtn = document.getElementById('fbtn-all');
-  if (allBtn) allBtn.classList.add('active');
 }
 
 function showToast(msg) {
